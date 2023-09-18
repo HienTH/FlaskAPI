@@ -22,6 +22,9 @@ def fetch_data_from_database():
     return data
 
 
+# [hienhd]
+# Show all data from table
+
 # Function to fetch data from SQLite
 def show_all_data_from_database():
     conn = sqlite3.connect('account.db')
@@ -36,6 +39,8 @@ def show_all_data():
     rsData = show_all_data_from_database()
     return jsonify({"data": rsData}), 200
 
+# [hienhd]
+# Get webtoken from 1 account
 
 # Function to fetch data from SQLite
 def fetch_webtoken_from_database(site, typelink):
@@ -56,6 +61,8 @@ def get_webtoken_data():
     rsData = fetch_webtoken_from_database(site, typelink)
     return jsonify({"data": rsData}), 200
 
+# [hienhd]
+# Update webtoken with 1 account
 
 # Function to fetch data from SQLite
 def update_webtoken_to_database(webtoken, username, site, typelink):
@@ -86,7 +93,11 @@ def update_web_token():
     rsData = update_webtoken_to_database(webtoken, username, site, typelink)
     return jsonify({"success": rsData}), 200
 
-csrf_token = "220bc3ec7838404a4d1eba129951a23c"
+
+# [hienhd]
+# Get link photo freebik with 1 account
+
+csrf_token = "220bc3ec7838404a4d1eba129951a33c"
 
 def getIdentityAPI(csrf_freepik, link, cookie_request):
     
@@ -171,6 +182,23 @@ def getFreebikPhotoAPI(link, id, csrf_freepik):
 
     return {'result': 'error', 'message': 'Get link fail'}
 
+@app.route('/getFreebikPhoto', methods=['POST'])
+def get_freebik_photo():
+    
+    data = request.get_json()
+    link = data['link'] 
+    id = data['id']
+
+    if 'x-csrf-token' not in data and data['x-csrf-token'] == 'vngetlink2023' and (link == '' or id == ''):
+        return jsonify({'result': 'error', 'message': 'Authentication is required'}), 200
+    
+    rsData = getFreebikPhotoAPI(link, id, csrf_token)
+    
+    return jsonify(rsData), 200
+
+
+# [hienhd]
+# Get link video freebik with 1 account
 
 def refreshGRToken(link):
 
@@ -213,7 +241,6 @@ def refreshGRToken(link):
             countRetry = countRetry + 1
             time.sleep(0.5)
 
-
 def getFreebikVideoAPI(link, id, GR_TOKEN):
 
     # Get cookie from many Account
@@ -229,8 +256,8 @@ def getFreebikVideoAPI(link, id, GR_TOKEN):
                     "Referer": link
                 }
 
-    url = "https://www.freepik.com/api/download?optionId=" + id
-
+    url = "https://www.freepik.com/api/video/download?optionId=" + id
+    print(url)
     countRetry = 1
     while countRetry <= 1:
         try:
@@ -257,22 +284,7 @@ def getFreebikVideoAPI(link, id, GR_TOKEN):
         
     return {'result': 'error', 'message': 'Get link fail'}
 
-
-@app.route('/getFreebikPhoto', methods=['POST'])
-def get_freebik_photo():
-    
-    data = request.get_json()
-    link = data['link'] 
-    id = data['id']
-
-    if 'x-csrf-token' not in data and data['x-csrf-token'] == 'vngetlink2023' and (link == '' or id == ''):
-        return jsonify({'result': 'error', 'message': 'Authentication is required'}), 200
-    
-    rsData = getFreebikPhotoAPI(link, id, csrf_token)
-    
-    return jsonify(rsData), 200
-
-@app.route('/getFreebikVideo', methods=['GET'])
+@app.route('/getFreebikVideo', methods=['POST'])
 def get_freebik_video():
 
     data = request.get_json()
@@ -293,6 +305,145 @@ def get_freebik_video():
     
     return jsonify(rsData), 200
 
+
+
+# [hienhd]
+# Get link psd huaban with 1 account
+def getMaterialsInfo(link, pinid, cookie_request):
+    headers = {
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+                "Cookie": cookie_request,
+                "Referer": link,
+            }
+
+    url = "https://api.huaban.com/pins/" + str(pinid) + "?fields=pin:PIN_DETAIL&pins=20"
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            rs = response.json()
+            if 'material_info' in rs['pin']:
+                print("material_id: ", rs['pin']['material_info']['id'])
+                print("material_title: ", rs['pin']['material_info']['title'])
+                print("material_format: ", rs['pin']['material_info']['origin_file_format'])
+                return rs['pin']['file_material']['material_id'], rs['pin']['material_info']['title'], rs['pin']['material_info']['origin_file_format']
+            else:
+                print("Get material_info Error: Link is not contain Material")
+                return "", "", ""
+
+        else:
+            print("Get material_info Error: ", response.status_code)
+            return "", "", ""
+        
+    except Timeout:
+        print("Get material_info Timeout...")
+        return "", "", ""
+
+def getHuabanPreDownload(link, materialsId, cookie_request):
+    headers = {
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+                "Cookie": cookie_request,
+                "Referer": link,
+            }
+
+    data = {
+        'download_type': 1,
+        'type': 4
+    }
+
+    url = "https://api.huaban.com/biz/materials/" + str(materialsId) + "/pre-download"
+    print("Link Predownload: ", url)
+    response = requests.post(url, json=data, headers=headers, timeout=5)
+    if response.status_code == 200:
+        rs = response.json()
+        return rs
+    else:
+        print("Error: " + response.status_code)
+        return {"vips": []}
+
+def getHuabanDownload(link, pinid, materialsId, materialsTitle, materialsFormat, preDownload, cookie_request):
+    print("Downloading VIP...")
+    logging.info(f"Process: Downloading...")
+    headers = {
+                "Accept-Encoding": "gzip, deflate, br",
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+                "Cookie": cookie_request,
+                "Referer": link,
+            }
+
+    payload = {
+        "type": 4,
+        "download_type": 1,
+        "material_title": materialsTitle,
+        "right_code": preDownload['rights'][0]['inspect']['right_code'],
+        "system_code": preDownload['vips'][0]['system_code'],
+        "vip_cert_subject_id": preDownload['rights'][0]['subject_info']['id'],
+        "vip_name": preDownload['vips'][0]['vip']['title'],
+        "order_no": preDownload['vips'][0]['card_no'],
+        "vip_id": preDownload['vips'][0]['vip_id'],
+        "pin_id": pinid,
+        "filename": str(materialsTitle) + "_" + str(materialsId) + "." + str(materialsFormat),
+        "material_type": materialsFormat,
+        "fake_download": False
+    }
+
+    url = "https://api.huaban.com/biz/materials/" + str(materialsId) + "/download"
+
+    response = requests.post(url, json=payload, headers=headers, timeout=5)
+    if response.status_code == 200:
+        rs = response.json()
+        logging.info(f"Process: Downloading {link} success")
+        return {'result': 'success', 'leftDownload': preDownload['rights'][0]['inspect']['left'], 'message': rs }
+    else:
+        print("Error")
+        print(response.status_code)
+        logging.error(f"Process: Downloading error {response.status_code}")
+        return {'result': 'error', 'leftDownload': preDownload['rights'][0]['inspect']['left'], 'message': 'getHuabanDownload error...' + response.status_code}
+
+def getHuabanPSDAPI(link, pinid):
+
+    logging.info(f"Process getHuabanPSD: {link}")
+    sid = "s%3AxGixdtv1wZ19XgGUxcofwtuWh-KP9fA-.mVugLje%2FXZsvMRqBst%2FAQcnZrTnVK%2F%2FKTb0aboBtPsQ"
+    #sid = "s%3AuXKOGgmZho8wdQa6dgOCrzpu8N3134Nq.HadZaQzp0swR8F40N07w3r4WNVuj34bHnTLxXJmSRjY"
+    cookie_request = "user_device_id=fe32db8dd4c24808bf93457cb4bc3be5; user_device_id_timestamp=1693995081802; Hm_up_d4a0e7c3cd16eb58a65472f40e7ee543=%7B%22version%22%3A%7B%22value%22%3A%222.0.0%22%2C%22scope%22%3A1%7D%2C%22has_plugin%22%3A%7B%22value%22%3A%220%22%2C%22scope%22%3A1%7D%7D; sid=" + sid
+
+    materialsId, materialsTitle, materialsFormat = getMaterialsInfo(link, pinid, cookie_request)
+    if materialsId != "":
+        preDownload = getHuabanPreDownload(link, materialsId, cookie_request)
+        #print(preDownload)
+        if 'vips' in preDownload and len(preDownload['vips']) > 0:
+            #if preDownload['rights'][0]['inspect']['left'] > 0:
+            rs = getHuabanDownload(link, pinid, materialsId, materialsTitle, materialsFormat, preDownload, cookie_request)
+            #else:
+            #    print("Left Download = 0")
+            return rs
+        else:  
+            logging.error(f"Process: getHuabanPreDownload error")
+            return {'result': 'error', 'message': 'getHuabanPreDownload error'}
+    else:
+        logging.error(f"Process: getMaterialsInfo error")
+        return {'result': 'error', 'message': 'getMaterialsInfo error'}
+
+@app.route('/getHuabanPsd', methods=['POST'])
+def get_huaban_psd():
+    
+    data = request.get_json()
+    link = data['link'] 
+    id = data['id']
+
+    if 'x-csrf-token' not in data and data['x-csrf-token'] == 'vngetlink2023' and (link == '' or id == ''):
+        return jsonify({'result': 'error', 'message': 'Authentication is required'}), 200
+    
+    rsData = getHuabanPSDAPI(link, id)
+    
+    return jsonify(rsData), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
